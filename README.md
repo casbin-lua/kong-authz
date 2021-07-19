@@ -14,10 +14,12 @@ Install Casbin's latest release (currently v1.16.1) from LuaRocks by:
 sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.16.1-1.rockspec
 ```
 
-And finally install the kong-authz plugin by:
+And install the kong-authz plugin by:
 ```
 sudo luarocks install https://raw.githubusercontent.com/casbin-lua/kong-authz/master/kong-authz-0.0.1-1.rockspec
 ```
+
+Finally, add this plugin's name to your kong.conf file by appending `kong-authz` (with a comma) to the `plugins` variable.
 
 ## Configuration
 
@@ -55,6 +57,16 @@ curl -i -X POST \
 
 If the request is authorized, the execution will proceed normally. While if it is not authorized, it will return "Access Denied" error with the 403 exit code and stop any further execution.
 
+## Development
+
+Want to customize this according to your scenario? Then navigate to your kong/plugins folder and do this:
+```
+git clone https://github.com/casbin-lua/kong-authz
+cd kong-authz
+# customize it here
+luarocks make *.rockspec
+```
+
 ## Documentation
 
 The authorization determines a request based on `{subject, object, action}`, which means what `subject` can perform what `action` on what `object`. In this plugin, the meanings are:
@@ -62,6 +74,26 @@ The authorization determines a request based on `{subject, object, action}`, whi
 2. `object`: the URL path for the web resource like "dataset1/item1"
 3. `action`: HTTP method like GET, POST, PUT, DELETE, or the high-level actions you defined like "read-file", "write-blog"
 For how to write authorization policy and other details, please refer to the [Casbin's documentation](https://casbin.org/).
+
+## Example
+
+An example of policy file and model file is given in the [examples](https://github.com/casbin-lua/kong-authz/tree/master/examples) directory of this repo. To use that for some service, clone the examples directory to your system and send a POST command to the Kong Admin API as:
+```
+curl -i -X POST \
+  --url http://localhost:8001/services/example-service/plugins/ \
+  --data 'name=kong-authz' \
+  --data 'config.model_path=path_of_your_authz_model.conf' \
+  --data 'config.policy_path=path_of_your_authz_policy.csv' \
+  --data 'config.username=user'
+```
+
+This will configure the model and policy for *example-service*. Now, send a request for the first time with your configured config.username paramter through a header. For example:
+```
+curl -i -X GET \
+  --url http://localhost:8000/ \
+  --header 'user: anonymous' 
+```
+When run for the first time, it will create a Casbin Enforcer using the model path and policy path. If this returns any non 500 error, then the configuration is good to go otherwise please check the error.log file in your Kong setup.
 
 ## Getting Help
 
