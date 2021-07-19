@@ -1,5 +1,9 @@
 # kong-authz
 
+[![GitHub Action](https://github.com/casbin-lua/kong-authz/workflows/test/badge.svg?branch=master)](https://github.com/casbin-lua/kong-authz/actions)
+[![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/casbin/lobby)
+
 kong-authz is an authorization plugin for Kong based on [lua-casbin](https://github.com/casbin/lua-casbin/).
 
 ## Installation
