@@ -1,0 +1,83 @@
+name: test
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: kong        
+          POSTGRES_PASSWORD: kong
+          POSTGRES_USER: kong
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    strategy:
+      fail-fast: false
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install Kong and setup kong-authz
+      run: |
+        # install and configure kong
+        sudo apt update
+        curl -Lo kong.2.5.0.amd64.deb "https://download.konghq.com/gateway-2.x-ubuntu-$(lsb_release -cs)/pool/all/k/kong/kong_2.5.0_amd64.deb"
+        sudo dpkg -i kong.2.5.0.amd64.deb
+        sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
+        sudo bash -c 'echo "pg_user = kong" >> /etc/kong/kong.conf'
+        sudo bash -c 'echo "pg_password = kong" >> /etc/kong/kong.conf'
+        sudo bash -c 'echo "pg_database = kong" >> /etc/kong/kong.conf'
+        sudo bash -c 'echo "plugins = bundled, kong-authz" >> /etc/kong/kong.conf'
+        sudo kong migrations bootstrap
+        sudo kong migrations up -c /etc/kong/kong.conf
+        # setup kong-authz
+        sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.16.1-1.rockspec
+        sudo luarocks install https://raw.githubusercontent.com/casbin-lua/kong-authz/master/kong-authz-0.0.1-1.rockspec
+        sudo kong start -c /etc/kong/kong.conf
+        sudo cp examples/authz_model.conf /etc/kong/authz_model.conf
+        sudo cp examples/authz_policy.csv /etc/kong/authz_policy.csv
+        # set up an example service
+        curl -i -X POST \
+        --url http://localhost:8001/services/ \
+        --data 'name=example-service' \
+        --data 'url=http://mockbin.org'
+        # set up an example route
+        curl -i -X POST \
+        --url http://localhost:8001/services/example-service/routes \
+        --data 'hosts[]=example.com'
+        # set the plugin globally
+        curl -i -X POST \
+        --url http://localhost:8001/plugins/ \
+        --data 'name=kong-authz' \
+        --data 'config.model_path=/etc/kong/authz_model.conf' \
+        --data 'config.policy_path=/etc/kong/authz_policy.csv' \
+        --data 'config.username=user'
+        # restart kong
+        sudo kong stop
+        sudo kong start -c /etc/kong/kong.conf
+    - name: Set up Lua
+      uses: leafo/gh-actions-lua@v8.0.0
+      with:
+        luaVersion: 5.1
+    - name: Set up luarocks
+      uses: leafo/gh-actions-luarocks@v4.0.0
+    - name: Set up testing env
+      run: |
+        luarocks install busted
+        luarocks install busted-htest
+        luarocks install luasocket
+    - name: Run test
+      run: |
+        busted plugin_test.lua -o htest
