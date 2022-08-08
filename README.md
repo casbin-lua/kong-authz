@@ -23,7 +23,13 @@ And install the kong-authz plugin by:
 sudo luarocks install https://raw.githubusercontent.com/casbin-lua/kong-authz/master/kong-authz-0.0.1-1.rockspec
 ```
 
-Finally, add this plugin's name to your kong.conf file by appending `kong-authz` (with a comma) to the `plugins` variable.
+Then, add this plugin's name to your kong.conf file by appending `kong-authz` (with a comma) to the `plugins` variable.
+
+Finally, start or restart your Kong:
+
+```bash
+kong start [-c /path/to/kong.conf]
+```
 
 ## Configuration
 
