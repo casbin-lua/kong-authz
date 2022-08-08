@@ -1,7 +1,8 @@
 package = "kong-authz"
 version = "0.0.1-1"
 source = {
-   url = "git://github.com/casbin-lua/kong-authz",
+   url = "https://github.com/casbin-lua/kong-authz/archive/v1.0.0.tar.gz",
+   dir = "kong-authz-1.0.0"
 }
 description = {
    summary = "Casbin authorization plugin for Kong",
