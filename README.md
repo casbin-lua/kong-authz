@@ -6,13 +6,13 @@
 
 kong-authz is an authorization plugin for Kong based on [lua-casbin](https://github.com/casbin/lua-casbin/).
 
-## Precondition
+## Prerequisites
 
 The following need to be installed in advance:
 
 - [Kong](https://konghq.com/)
-- [4daysorm-adapter](https://github.com/casbin-lua/4daysorm-adapter) (if you want use database as policy storage by 4DaysORM-adatper)
-- [luasql-adapter](https://github.com/casbin-lua/luasql-adapter)(if you want use database as policy storage by luasql-adatper)
+- [4daysorm-adapter](https://github.com/casbin-lua/4daysorm-adapter) (if you want to use database as policy storage by 4DaysORM-adatper)
+- [luasql-adapter](https://github.com/casbin-lua/luasql-adapter)(if you want to use database as policy storage by luasql-adatper)
 
 **Notice:** if you want to use Casbin policy from DB, just choose one from 4daysorm-adapter and luasql-adapter.
 

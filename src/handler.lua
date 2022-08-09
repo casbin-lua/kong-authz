@@ -21,7 +21,7 @@ local plugin = {
     VERSION = "0.1",
 }
 
-DB = {}
+_G.DB = {} -- required if using 4DaysORMAdapter
 
 local getLuaSQLAdapter = function (db_info)
     local Adapter = require("casbin."..db_info.db_type)

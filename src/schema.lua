@@ -68,12 +68,12 @@ return {
                 end
                 local db_type = config.db_info.db_type
                 if not isNotEmptyStr(db_type) then
-                    return false, "you are using sql-adapter, please specify db_type and other userful db info"
+                    return false, "you are using sql-adapter, please specify db_type and other required db info"
                 end
                 if adapter_type == "luasql" and (not contains(db_type, luasql_arr)) then
-                    return false, db_type.."not supported when adapter_type is"..adapter_type
+                    return false, db_type .. " not supported when adapter_type is " .. adapter_type
                 elseif adapter_type == "4daysorm" and (not contains(db_type, orm_arr)) then
-                    return false, db_type.."not supported when adapter_type is"..adapter_type
+                    return false, db_type .. " not supported when adapter_type is " .. adapter_type
                 end
                 return true
           end
