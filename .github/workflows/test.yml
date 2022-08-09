@@ -2,9 +2,9 @@ name: test
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   test:
@@ -31,11 +31,15 @@ jobs:
       uses: actions/checkout@v2
     - name: Install Kong and setup kong-authz
       run: |
-        # install and configure kong
+        # install kong
         sudo apt update
         sudo apt install gcc libpcre3 libpcre3-dev
         curl -Lo kong.2.5.0.amd64.deb "https://download.konghq.com/gateway-2.x-ubuntu-$(lsb_release -cs)/pool/all/k/kong/kong_2.5.0_amd64.deb"
         sudo dpkg -i kong.2.5.0.amd64.deb
+        # install dependencies.
+        sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
+        sudo luarocks make *.rockspec
+        # configure kong
         sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
         sudo bash -c 'echo "pg_user = kong" >> /etc/kong/kong.conf'
         sudo bash -c 'echo "pg_password = kong" >> /etc/kong/kong.conf'
@@ -43,9 +47,7 @@ jobs:
         sudo bash -c 'echo "plugins = bundled, kong-authz" >> /etc/kong/kong.conf'
         sudo kong migrations bootstrap
         sudo kong migrations up -c /etc/kong/kong.conf
-        # install dependencies.
-        sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
-        sudo luarocks install *.rockspec
+        sleep 1
         # setup kong-authz
         sudo kong start -c /etc/kong/kong.conf
         sudo cp examples/authz_model.conf /etc/kong/authz_model.conf
