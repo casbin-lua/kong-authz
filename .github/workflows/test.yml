@@ -39,6 +39,7 @@ jobs:
         # install dependencies.
         sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
         sudo luarocks make *.rockspec
+        sleep 1
         # configure kong
         sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
         sudo bash -c 'echo "pg_user = kong" >> /etc/kong/kong.conf'
