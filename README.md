@@ -14,7 +14,7 @@ The following need to be installed in advance:
 - [4daysorm-adapter](https://github.com/casbin-lua/4daysorm-adapter) (if you want to use database as policy storage by 4DaysORM-adatper)
 - [luasql-adapter](https://github.com/casbin-lua/luasql-adapter)(if you want to use database as policy storage by luasql-adatper)
 
-**Notice:** if you want to use Casbin policy from DB, just choose one from 4daysorm-adapter and luasql-adapter.
+**Notice:** The Casbin policy is reading from a file by default. If you want to use Casbin policy from DB, just choose one from 4daysorm-adapter and luasql-adapter.
 
 ## Installation
 
@@ -24,10 +24,10 @@ Ensure you have Casbin's system dependencies installed by:
 sudo apt install gcc libpcre3 libpcre3-dev
 ```
 
-Install Casbin's latest release (currently v1.16.1) from LuaRocks by:
+Install Casbin's latest release from LuaRocks by:
 
 ```bash
-sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.16.1-1.rockspec
+sudo luarocks install casbin
 ```
 
 And install the kong-authz plugin by:
@@ -160,7 +160,6 @@ curl -i -X POST \
 </td>
 </tr>
 </tbody></table>
-
 
 If the request is authorized, the execution will proceed normally. While if it is not authorized, it will return "Access Denied" error with the 403 exit code and stop any further execution.
 
