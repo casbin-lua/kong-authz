@@ -13,7 +13,7 @@ jobs:
       postgres:
         image: postgres:9.6
         env:
-          POSTGRES_DB: kong        
+          POSTGRES_DB: kong
           POSTGRES_PASSWORD: kong
           POSTGRES_USER: kong
         ports:
@@ -27,62 +27,189 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Install Kong and setup kong-authz
-      run: |
-        # install kong
-        sudo apt update
-        sudo apt install gcc libpcre3 libpcre3-dev
-        curl -Lo kong.2.5.0.amd64.deb "https://download.konghq.com/gateway-2.x-ubuntu-$(lsb_release -cs)/pool/all/k/kong/kong_2.5.0_amd64.deb"
-        sudo dpkg -i kong.2.5.0.amd64.deb
-        # install dependencies.
-        sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
-        sudo luarocks make *.rockspec
-        sleep 1
-        # configure kong
-        sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
-        sudo bash -c 'echo "pg_user = kong" >> /etc/kong/kong.conf'
-        sudo bash -c 'echo "pg_password = kong" >> /etc/kong/kong.conf'
-        sudo bash -c 'echo "pg_database = kong" >> /etc/kong/kong.conf'
-        sudo bash -c 'echo "plugins = bundled, kong-authz" >> /etc/kong/kong.conf'
-        sudo kong migrations bootstrap
-        sudo kong migrations up -c /etc/kong/kong.conf
-        sleep 1
-        # setup kong-authz
-        sudo kong start -c /etc/kong/kong.conf
-        sudo cp examples/authz_model.conf /etc/kong/authz_model.conf
-        sudo cp examples/authz_policy.csv /etc/kong/authz_policy.csv
-        # set up an example service
-        curl -i -X POST \
-        --url http://localhost:8001/services/ \
-        --data 'name=example-service' \
-        --data 'url=http://mockbin.org'
-        # set up an example route
-        curl -i -X POST \
-        --url http://localhost:8001/services/example-service/routes \
-        --data 'hosts[]=example.com'
-        # set the plugin globally
-        curl -i -X POST \
-        --url http://localhost:8001/plugins/ \
-        --data 'name=kong-authz' \
-        --data 'config.model_path=/etc/kong/authz_model.conf' \
-        --data 'config.policy_path=/etc/kong/authz_policy.csv' \
-        --data 'config.username=user'
-        # restart kong
-        sudo kong stop
-        sudo kong start -c /etc/kong/kong.conf
-    - name: Set up Lua
-      uses: leafo/gh-actions-lua@v8.0.0
-      with:
-        luaVersion: 5.1
-    - name: Set up luarocks
-      uses: leafo/gh-actions-luarocks@v4.0.0
-    - name: Set up testing env
-      run: |
-        luarocks install busted
-        luarocks install busted-htest
-        luarocks install luasocket
-    - name: Run test
-      run: |
-        busted plugin_test.lua -o htest
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install Kong and setup kong-authz
+        run: |
+          # install and configure kong
+          sudo apt update
+          sudo apt install gcc libpcre3 libpcre3-dev
+          curl -Lo kong.2.5.0.amd64.deb "https://download.konghq.com/gateway-2.x-ubuntu-$(lsb_release -cs)/pool/all/k/kong/kong_2.5.0_amd64.deb"
+          sudo dpkg -i kong.2.5.0.amd64.deb
+          # install dependencies.
+          sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
+          sudo luarocks make *.rockspec
+          sleep 1
+          # configure kong
+          sudo cp /etc/kong/kong.conf.default /etc/kong/kong.conf
+          sudo bash -c 'echo "pg_user = kong" >> /etc/kong/kong.conf'
+          sudo bash -c 'echo "pg_password = kong" >> /etc/kong/kong.conf'
+          sudo bash -c 'echo "pg_database = kong" >> /etc/kong/kong.conf'
+          sudo bash -c 'echo "plugins = bundled, kong-authz" >> /etc/kong/kong.conf'
+          sudo kong migrations bootstrap
+          sudo kong migrations up -c /etc/kong/kong.conf
+          sleep 1
+          # setup kong-authz
+          sudo kong start -c /etc/kong/kong.conf
+          sudo cp examples/authz_model.conf /etc/kong/authz_model.conf
+          sudo cp examples/authz_policy.csv /etc/kong/authz_policy.csv
+          # set up an example service
+          curl -i -X POST \
+          --url http://localhost:8001/services/ \
+          --data 'name=example-service' \
+          --data 'url=http://mockbin.org'
+          # set up an example route
+          curl -i -X POST \
+          --url http://localhost:8001/services/example-service/routes \
+          --data 'hosts[]=example.com'
+
+      - name: Set up Lua
+        uses: leafo/gh-actions-lua@v8.0.0
+        with:
+          luaVersion: 5.1
+
+      - name: Set up luarocks
+        uses: leafo/gh-actions-luarocks@v4.0.0
+      - name: Set up testing env
+        run: |
+          luarocks install busted
+          luarocks install busted-htest
+          luarocks install luasocket
+          luarocks install luasec
+
+      - name: Set Kong-authz plugin globally by file
+        run: |
+          # set the plugin globally
+          echo curl -i -X POST \
+          --url http://localhost:8001/plugins/ \
+          --data 'name=kong-authz' \
+          --data 'config.model_path=/etc/kong/authz_model.conf' \
+          --data 'config.policy_path=/etc/kong/authz_policy.csv' \
+          --data 'config.username=user' > temp1.log
+
+          source temp1.log > result1
+          id=$(cat result1 | sed 's/,/\n/g' | grep "id" | sed 's/:/\n/g' | sed '1d' | sed 's/}//g'| sed 's/"//g')
+          echo "FILE_PLUGIN_ID=$id" >> $GITHUB_ENV
+
+          # restart kong
+          sudo kong stop
+          sudo kong start -c /etc/kong/kong.conf
+
+      - name: Run file test
+        run: |
+          busted plugin_test.lua -o htest
+
+      - name: Install DB dependencies and setup environment
+        env:
+          MYSQL_DB: casbin
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -e 'CREATE DATABASE ${{ env.MYSQL_DB }};' -u${{ env.MYSQL_USER }} -p${{ env.MYSQL_PASSWORD }}
+          sudo apt install sqlite3 libsqlite3-dev lua-sql-mysql libpq-dev
+          sudo git clone https://github.com/lunarmodules/luasql.git
+          # install luasql driver
+          cd luasql/rockspec
+          sudo cp ./luasql-mysql-2.6.0-1.rockspec ../luasql-mysql-2.6.0-1.rockspec
+          sudo cp ./luasql-postgres-2.6.0-1.rockspec ../luasql-postgres-2.6.0-1.rockspec
+          sudo cp ./luasql-sqlite3-2.6.0-1.rockspec ../luasql-sqlite3-2.6.0-1.rockspec
+          cd ..
+          sudo luarocks make luasql-mysql-2.6.0-1.rockspec MYSQL_INCDIR=/usr/include/mysql/
+          sudo luarocks make luasql-postgres-2.6.0-1.rockspec PGSQL_INCDIR=/usr/include/postgresql/
+          sudo luarocks make luasql-sqlite3-2.6.0-1.rockspec
+          cd ..
+          # init policy data
+          export MYSQL_DB=${{ env.MYSQL_DB }}
+          export MYSQL_USER=${{ env.MYSQL_USER }}
+          export MYSQL_PASSWORD=${{ env.MYSQL_PASSWORD }}
+          lua ./examples/luasqlDB.lua
+          lua ./examples/ormDB.lua
+          sleep 1
+          # install luasql-adapter
+          sudo git clone https://github.com/casbin-lua/luasql-adapter.git
+          cd luasql-adapter
+          sudo luarocks make *.rockspec
+          cd ..
+          # install 4daysorm-adapter
+          sudo git clone https://github.com/casbin-lua/4daysorm-adapter.git
+          cd 4daysorm-adapter
+          sudo luarocks make *.rockspec
+          cd ..
+
+      - name: Set Kong-authz plugin globally by luasql-mysql
+        env:
+          MYSQL_DB: casbin
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+        run: |
+          # remove last plugin
+          curl -i -X DELETE --url http://localhost:8001/plugins/${{ env.FILE_PLUGIN_ID }}
+          # set the plugin globally
+          echo curl -i -X POST \
+          --url http://localhost:8001/plugins/ \
+          --data 'name=kong-authz' \
+          --data 'config.model_path=/etc/kong/authz_model.conf' \
+          --data 'config.username=user' \
+          --data 'config.adapter=luasql' \
+          --data 'config.db_info.db_type=mysql' \
+          --data 'config.db_info.database=${{ env.MYSQL_DB }}' \
+          --data 'config.db_info.username=${{ env.MYSQL_USER }}' \
+          --data 'config.db_info.password=${{ env.MYSQL_PASSWORD }}' \
+          --data 'config.db_info.host=127.0.0.1' \
+          --data 'config.db_info.port=3306' > temp2.log
+
+          source temp2.log > result2
+          cat result2
+          id=$(cat result2 | sed 's/,/\n/g' | grep "id" | sed 's/:/\n/g' | sed '1d' | sed 's/}//g'| sed 's/"//g')
+          echo "SQL_PLUGIN_ID=$id" >> $GITHUB_ENV
+
+          # restart kong
+          sudo kong stop
+          sudo kong start -c /etc/kong/kong.conf
+          sleep 1
+
+      - name: Run luasql test
+        run: |
+          busted plugin_test.lua -o htest
+
+      - name: Set Kong-authz plugin globally by 4daysorm-mysql
+        env:
+          MYSQL_DB: casbin
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+        run: |
+          # remove last plugin
+          curl -i -X DELETE --url http://localhost:8001/plugins/${{ env.SQL_PLUGIN_ID }}
+          sleep 1
+          # set the plugin globally
+          echo curl -i -X POST \
+          --url http://localhost:8001/plugins/ \
+          --data 'name=kong-authz' \
+          --data 'config.model_path=/etc/kong/authz_model.conf' \
+          --data 'config.username=user' \
+          --data 'config.adapter=4daysorm' \
+          --data 'config.db_info.db_type=mysql' \
+          --data 'config.db_info.database=${{ env.MYSQL_DB }}' \
+          --data 'config.db_info.username=${{ env.MYSQL_USER }}' \
+          --data 'config.db_info.password=${{ env.MYSQL_PASSWORD }}' \
+          --data 'config.db_info.host=127.0.0.1' \
+          --data 'config.db_info.port=3306' > temp3.log
+
+          source temp3.log > result3
+          cat result3
+          id=$(cat result3 | sed 's/,/\n/g' | grep "id" | sed 's/:/\n/g' | sed '1d' | sed 's/}//g'| sed 's/"//g')
+          echo "ORM_PLUGIN_ID=$id" >> $GITHUB_ENV
+
+          sleep 1
+
+          # restart kong
+          sudo kong stop
+          sudo kong start -c /etc/kong/kong.conf
+
+          sleep 1
+
+      - name: Run 4daysorm test
+        run: |
+          busted plugin_test.lua -o htest
