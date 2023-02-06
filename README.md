@@ -24,6 +24,8 @@ Ensure you have Casbin's system dependencies installed by:
 sudo apt install gcc libpcre3 libpcre3-dev
 ```
 
+Or
+
 ```
 sudo apk add gcc pcre pcre-dev libc-dev
 ```
