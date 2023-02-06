@@ -24,6 +24,9 @@ Ensure you have Casbin's system dependencies installed by:
 sudo apt install gcc libpcre3 libpcre3-dev
 ```
 
+```
+sudo apk add gcc pcre pcre-dev libc-dev
+```
 Install Casbin's latest release from LuaRocks by:
 
 ```bash
