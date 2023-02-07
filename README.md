@@ -18,10 +18,18 @@ The following need to be installed in advance:
 
 ## Installation
 
-Ensure you have Casbin's system dependencies installed by:
+Ensure you have Casbin's system dependencies installed:
+
+- For systems having `apt` package manager:
 
 ```
 sudo apt install gcc libpcre3 libpcre3-dev
+```
+
+- For Alpine based systems:
+
+```
+sudo apk install gcc pcre pcre-dev libc-dev
 ```
 
 Install Casbin's latest release from LuaRocks by:
