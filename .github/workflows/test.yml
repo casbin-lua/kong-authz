@@ -38,7 +38,7 @@ jobs:
           curl -Lo kong.2.5.0.amd64.deb "https://download.konghq.com/gateway-2.x-ubuntu-$(lsb_release -cs)/pool/all/k/kong/kong_2.5.0_amd64.deb"
           sudo dpkg -i kong.2.5.0.amd64.deb
           # install dependencies.
-          sudo luarocks install https://raw.githubusercontent.com/casbin/lua-casbin/master/casbin-1.41.1-1.rockspec
+          sudo luarocks install casbin
           sudo luarocks make *.rockspec
           sleep 1
           # configure kong
